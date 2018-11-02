@@ -247,12 +247,27 @@ var ClayPaverColorPicker = {
 	},
 };
 
+// Converter for px to rem
+function pxToRem(px) {
+	return (px / parseFloat(getComputedStyle(document.documentElement).fontSize)) + 'rem';
+}
+
+// Converter for rem to px
+function remToPx(rem) {
+	return (rem * parseFloat(getComputedStyle(document.documentElement).fontSize)) + 'px';
+}
 
 // Clay Paver
 
 var cpSpinnerTPL = '<div class="cp-loading"><div class="cp-loading-spinner"><div class="lds-heart-container"><div class="lds-heart"><div class="lds-heart-icon"></div></div></div><span class="cp-loading-msg">Loading...</span></div></div>';
 
 var cpStatusBarTPL = '<div class="cp-status-bar"><span class="cp-status-bar-msg"></span></div>';
+
+var remPxToggleButtonTPL = `<button class="rem-px-converter" style="position: absolute;right: 0;height: 28px;bottom: 0;" type="button">rem/px</button>`;
+
+var PX_REM_REGEX = /^(\d+\.?(?:\d+)?)(px|rem)$/;
+
+var PX_REGEX = /^(\d+\.?(?:\d+)?)(px)$/;
 
 var SASS_VAR_REGEX = /\$(.*?)(?=:)/g;
 
@@ -323,6 +338,33 @@ var ClayPaver = {
 		});
 	},
 
+	createRemPxToggle: function(input) {
+		var inputParent = input.parent();
+		var value = input.val();
+		
+		if (!value) {
+			return;
+		}
+
+		var match = value.match(PX_REM_REGEX);
+
+		if (match && !inputParent.find('.rem-px-converter').length) {
+			var isPixels = match[2] === 'px';
+	
+			inputParent.append(remPxToggleButtonTPL);
+
+			inputParent.find('.rem-px-converter').on('click', function() {
+				var match = input.val().match(PX_REM_REGEX);
+	
+				var numericalValue = match[1];
+	
+				var newValue = match[2] === 'px' ? pxToRem(numericalValue) : remToPx(numericalValue);
+	
+				input.val(newValue);
+			});
+		}
+	},
+
 	getVarName: function(item) {
 		return item.substring(5, item.length - 1);
 	},
@@ -363,6 +405,8 @@ var ClayPaver = {
 
 						input.val(value[item]);
 
+						ClayPaver.createRemPxToggle(input);
+
 						if (colorInput.length) {
 							if (value[item] === '') {
 								colorInput.val('#ffffff');
@@ -387,6 +431,12 @@ var ClayPaver = {
 		for (var i = 0; i < formValues.length; i++) {
 			varName = ClayPaver.getVarName(formValues[i].name);
 			varVal = formValues[i].value;
+
+			const match = varVal.match(PX_REGEX);
+
+			if (match) {
+				varVal = pxToRem(match[1]);
+			}
 
 			variableGroup[varName] = varVal;
 		}
@@ -593,6 +643,10 @@ doc.on('click', '.cp-unset-link', function(event) {
 	}
 
 	textInput.focus();
+});
+
+doc.on('change', 'input', function(event) {
+	ClayPaver.createRemPxToggle($(this));
 });
 
 // Color Picker
